@@ -1,11 +1,11 @@
 // firebase.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getDatabase, ref, set, update, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCkqTQbzsppJHibUroWE5WtvxAFG6TUAzs",
     authDomain: "hilocardst.firebaseapp.com",
-    databaseURL: "https://hilocardst-default-rtdb.firebaseio.com", // ⚡ precisa do RTDB
+    databaseURL: "https://hilocardst-default-rtdb.firebaseio.com",
     projectId: "hilocardst",
     storageBucket: "hilocardst.appspot.com",
     messagingSenderId: "470124139327",
@@ -22,21 +22,33 @@ let playerRole = null; // "p1" ou "p2"
 export function createRoom(initialState) {
   roomId = Math.random().toString(36).substring(2, 8);
   playerRole = "p1";
-  set(ref(db, "rooms/" + roomId), { state: initialState });
+  // Garanta flag gameStarted (host cria pré-game)
+  const stateToSave = { ...initialState, gameStarted: initialState.gameStarted || false };
+  set(ref(db, `rooms/${roomId}`), stateToSave);
   return roomId;
 }
 
-export function joinRoom(code, callback) {
+// Listener genérico (usável pelo host para "escutar" a sala sem mudar role)
+export function listenRoom(code, callback) {
   roomId = code;
-  playerRole = "p2";
-  onValue(ref(db, "rooms/" + roomId + "/state"), (snapshot) => {
+  onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
     if (snapshot.exists()) callback(snapshot.val());
   });
 }
 
+// Join (usado pelo guest: marca role=p2 e começa a escutar)
+export function joinRoom(code, callback) {
+  roomId = code;
+  playerRole = "p2";
+  onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
+    if (snapshot.exists()) callback(snapshot.val());
+  });
+}
+
+// Substitui totalmente o estado no DB (uso simples)
 export function syncState(state) {
   if (!roomId) return;
-  update(ref(db, "rooms/" + roomId), { state });
+  set(ref(db, `rooms/${roomId}`), state);
 }
 
 export function getPlayerRole() {
