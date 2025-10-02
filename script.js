@@ -1,4 +1,4 @@
-import { createRoom, joinRoom, syncState, getPlayerRole } from "./firebase.js";
+import { createRoom, joinRoom, listenRoom, syncState, getPlayerRole } from "./firebase.js";
 let roomId = null;
 
 // ----- Constantes Globais do Jogo -----
@@ -66,34 +66,20 @@ const CARD_POOL = {
   }
 
   function newGame() {
-    state = {
-      turn: 1,
-      active: 'p1',
-      p1: { id: 'p1', name: 'Jogador 1', pv: MAX_PV, deck: shuffle(player1CustomDeck), hand: [], discard: [], energy: 0, shield: 0 },
-      p2: { 
-          id: 'p2', 
-          name: gameMode === 'vs-bot' ? 'Inimigo' : 'Jogador 2', 
-          pv: MAX_PV, 
-          deck: gameMode === 'vs-bot' ? shuffle(buildStarterDeck()) : shuffle(player2CustomDeck), 
-          hand: [], discard: [], energy: 0, shield: 0 
-      },
-      activeEffects: [],
-      log: [],
-      gameEnded: false,
-      playedCards: [],
-      undoStack: []
-    };
-    for(let i=0; i<5; i++) { drawCard('p1'); drawCard('p2'); }
-    startTurn('p1');
-
-    if (gameMode === 'vs-player-online') {
-    joinRoom(roomId, (remoteState) => {
-        state = remoteState;
-        updateUI();
-    });
+state = {
+turn: 1,
+active: 'p1',
+p1: { id: 'p1', name: 'Jogador 1', pv: MAX_PV, deck: shuffle(player1CustomDeck), hand: [], discard: [], energy: 0, shield: 0 },
+p2: { id: 'p2', name: gameMode === 'vs-bot' ? 'Inimigo' : 'Jogador 2', pv: MAX_PV, deck: gameMode === 'vs-bot' ? shuffle(buildStarterDeck()) : shuffle(player2CustomDeck), hand: [], discard: [], energy: 0, shield: 0 },
+activeEffects: [],
+log: [],
+gameEnded: false,
+playedCards: [],
+undoStack: []
+};
+for(let i=0; i<5; i++) { drawCard('p1'); drawCard('p2'); }
+startTurn('p1');
 }
-
-  }
   
   function buildStarterDeck() {
     const deck = [];
@@ -560,47 +546,53 @@ const CARD_POOL = {
     
 
     // Botão de entrar em uma sala existente
-    document.getElementById("join-room-btn").onclick = () => {
+    // BOTÃO ENTRAR SALA (guest)
+        document.getElementById("join-room-btn").onclick = () => {
         const code = document.getElementById("room-code-input").value.trim();
         if (!code) return alert("Digite um código válido!");
-        
+
+
         gameMode = "vs-player-online";
         roomId = code;
         currentDeckBuilderFor = "p2";
         state = { p1: { name: "Jogador 1" }, p2: { name: "Você" } };
 
+
         document.getElementById("game-mode-selection").classList.add("hidden");
         document.getElementById("deck-builder-screen").classList.remove("hidden");
-
-        // começa deck builder do P2
         initializeDeckBuilder();
 
-        // fica escutando atualizações vindas do host
+
         joinRoom(roomId, (remoteState) => {
-            state = remoteState;
-            updateUI();
-            // Se ambos confirmaram deck, host inicia a partida
-    if (!state.gameStarted &&
+        state = remoteState;
+        updateUI();
+
+
+        // marca presença do jogador 2
+        if (!state.p2 || state.p2.name === "Aguardando...") {
+        state.p2 = { name: "Você", deck: [] };
+        syncState(state);
+        }
+
+
+        if (!state.gameStarted &&
         state.p1.deck && state.p1.deck.length === DECK_SIZE &&
         state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-
         state.gameStarted = true;
         syncState(state);
-
         document.getElementById("deck-builder-screen").classList.add("hidden");
         document.querySelector(".game-container").classList.remove("hidden");
         newGame();
-    }
+        }
 
-    // Se já marcado gameStarted, host também inicia
-    if (state.gameStarted) {
+
+        if (state.gameStarted) {
         document.getElementById("deck-builder-screen").classList.add("hidden");
         document.querySelector(".game-container").classList.remove("hidden");
         newGame();
-    }
-});
-
-    };
+        }
+        });
+        };
     const gameModeSelectionScreen = document.getElementById('game-mode-selection');
     const deckBuilderScreen = document.getElementById('deck-builder-screen');
     const gameContainer = document.querySelector('.game-container');
@@ -627,26 +619,34 @@ const CARD_POOL = {
     };
 
     document.getElementById("vs-player-online-btn").onclick = () => {
-    gameMode = "vs-player-online";
-    currentDeckBuilderFor = "p1";
+        gameMode = "vs-player-online";
+        currentDeckBuilderFor = "p1";
 
-    state = { p1: { name: "Você" }, p2: { name: "Aguardando..." } };
-    roomId = createRoom(state);  // cria a sala com esse estado
 
-    const codeEl = document.getElementById("room-code");
-    const displayEl = document.getElementById("room-code-display");
-    if (codeEl && displayEl) {
-        codeEl.innerText = roomId;
-        displayEl.classList.remove("hidden");
-    } else {
-        alert("Código da sala: " + roomId);
-    }
+        state = { p1: { name: "Você" }, p2: { name: "Aguardando..." } };
+        roomId = createRoom(state);
 
-    document.getElementById("game-mode-selection").classList.add("hidden");
-    document.getElementById("deck-builder-screen").classList.remove("hidden");
 
-    initializeDeckBuilder();
-};
+        // Host escuta a sala
+        listenRoom(roomId, (remoteState) => {
+        state = remoteState;
+        updateUI();
+
+
+        if (state.gameStarted) {
+        document.getElementById("deck-builder-screen").classList.add("hidden");
+        document.querySelector(".game-container").classList.remove("hidden");
+        newGame();
+        }
+        });
+
+
+        document.getElementById("room-code").innerText = roomId;
+        document.getElementById("room-code-display").classList.remove("hidden");
+        document.getElementById("game-mode-selection").classList.add("hidden");
+        document.getElementById("deck-builder-screen").classList.remove("hidden");
+        initializeDeckBuilder();
+    };
 
 
 
