@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Jogo de Cartas - Batalha de Decks</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="game-mode-selection">
+      <h1>Batalha de Decks</h1>
+      <p>Escolha o modo de jogo:</p>
+      <div class="mode-buttons">
+          <button id="vs-bot-btn">Jogador vs. Bot</button>
+          <button id="vs-player-btn">Jogador vs. Jogador (local)</button>
+          <button id="vs-player-online-btn">Jogador vs. Jogador (online)</button>
+      </div>
+      <br>
+      <div>
+        <label for="room-code-input">insira o codigo da sala</label>
+        <input id="room-code-input" type="text">
+        <button id="join-room-btn">Entrar</button>
+      </div>
+  </div>
+
+  <div id="deck-builder-screen" class="hidden">
+    <div id="room-code-display" class="hidden">
+    Código da sala: <span id="room-code"></span>
+  </div>
+    <h1 id="deck-builder-title">Monte seu Baralho</h1>
+    <p>Escolha <span id="deck-size-label">20</span> cartas para começar.</p>
+    <div class="deck-builder-main">
+        <div class="card-pool-container">
+            <h2>Cartas Disponíveis</h2>
+            <div id="card-pool"></div>
+        </div>
+        <div class="current-deck-container">
+            <h2>Seu Baralho (<span id="deck-counter">0/20</span>)</h2>
+            <div id="current-deck-list"></div>
+            <button id="start-game-btn" disabled>Confirmar Baralho</button>
+        </div>
+    </div>
+  </div>
+
+  <div class="game-container hidden">
+    <div class="top-bar">
+      <div class="enemy-area">
+        <div class="player-stats">
+          <div class="player-name" id="top-player-name">Inimigo</div>
+          <div class="pv-line">
+            <div class="pv" id="top-player-pv">40</div>
+            <img id="top-player-bleed-icon" src="sangue.png" class="status-icon hidden" alt="Ícone de Sangramento" title="Sofrendo de Sangramento">
+          </div>
+          <div class="health-bar-container">
+            <div id="top-player-health-bar" class="health-bar"></div>
+          </div>
+          <div class="resources">
+            <div class="resource-item">Baralho: <span id="top-player-deck">20</span></div>
+            <div class="resource-item">Descarte: <span id="top-player-discard">0</span></div>
+            <div class="resource-item">Energia: <span id="top-player-energy">0</span></div>
+          </div>
+        </div>
+        <div id="top-player-avatar" class="avatar">🤖</div>
+      </div>
+
+      <div class="center-area">
+        <div id="turn-indicator">Turno 1</div>
+        <div class="turn-controls">
+          <button id="undo-move" disabled>↩️ Retornar Jogada</button>
+          <button id="end-turn">Terminar Turno</button>
+        </div>
+      </div>
+
+      <div class="player-area">
+        <div id="bottom-player-avatar" class="avatar">😎</div>
+        <div class="player-stats">
+          <div class="player-name" id="bottom-player-name">Jogador</div>
+           <div class="pv-line">
+            <div class="pv" id="bottom-player-pv">40</div>
+             <img id="bottom-player-bleed-icon" src="sangue.png" class="status-icon hidden" alt="Ícone de Sangramento" title="Sofrendo de Sangramento">
+          </div>
+           <div class="health-bar-container">
+            <div id="bottom-player-health-bar" class="health-bar"></div>
+          </div>
+          <div class="resources">
+            <div class="resource-item">Baralho: <span id="bottom-player-deck">20</span></div>
+            <div class="resource-item">Descarte: <span id="bottom-player-discard">0</span></div>
+            <div class="energy-container">
+                <img src="energia.png" class="energy-title-icon" alt="Ícone de Energia">
+                <div class="energy-bar" id="bottom-player-energy"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="board-area">
+      <div class="played-cards-area">
+        <div class="played-cards-title">Cartas Jogadas:</div>
+        <div class="played-cards" id="played-cards"></div>
+      </div>
+      
+      <div class="log-area" id="log-area"></div>
+      <div class="hand" id="hand"></div>
+    </div>
+  </div>
+
+  <div id="turn-transition-screen" class="hidden">
+      <div class="transition-content">
+          <h2 id="transition-title">Passe para o próximo jogador</h2>
+          <p id="transition-text">Clique no botão quando estiver pronto.</p>
+          <button id="transition-continue-btn">Iniciar Turno</button>
+      </div>
+  </div>
+
+<script type="module" src="script.js"></script>
+<script type="module" src="firebase.js"></script>
+
+
+</body>
+</html>
