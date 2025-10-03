@@ -718,32 +718,32 @@ startTurn('p1');
 
         // Host escuta a sala
         listenRoom(roomId, (remoteState) => {
-  const expanded = expandRemoteState(remoteState);
-  if (expanded) {
-    state = expanded;
-    updateUI();
-  }
+            state = expandRemoteState(remoteState); // reconstrói cartas a partir de IDs
+            updateUI();
 
-  // Se for host e ambos os decks prontos, iniciar
-  const role = getPlayerRole();
-  if (!state.gameStarted && role === 'p1' &&
-      state.p1 && state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-      state.p2 && state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-    console.log('[DEBUG] Both decks present — host starting game');
-    state.gameStarted = true;
-    pushState();
-    document.getElementById("deck-builder-screen").classList.add("hidden");
-    document.querySelector(".game-container").classList.remove("hidden");
-    newGame();
-    return;
-  }
+            const role = getPlayerRole();
+            // se for host e os dois decks tiverem 20 cartas
+            if (!state.gameStarted && role === 'p1' &&
+                state.p1 && Array.isArray(state.p1.deck) && state.p1.deck.length === DECK_SIZE &&
+                state.p2 && Array.isArray(state.p2.deck) && state.p2.deck.length === DECK_SIZE) {
+                
+                console.log('[DEBUG] Host detectou os dois decks prontos, iniciando...');
+                state.gameStarted = true;
+                pushState();
 
-  if (state.gameStarted) {
-    document.getElementById("deck-builder-screen").classList.add("hidden");
-    document.querySelector(".game-container").classList.remove("hidden");
-    newGame();
-  }
-        });
+                document.getElementById("deck-builder-screen").classList.add("hidden");
+                document.querySelector(".game-container").classList.remove("hidden");
+                newGame();
+                return;
+            }
+
+            if (state.gameStarted) {
+                document.getElementById("deck-builder-screen").classList.add("hidden");
+                document.querySelector(".game-container").classList.remove("hidden");
+                newGame();
+            }
+            });
+
 
 
         document.getElementById("room-code").innerText = roomId;
@@ -774,17 +774,15 @@ startBtn.onclick = () => {
         }
 
         if (gameMode === "vs-player-online") {
-            if (currentDeckBuilderFor === "p1") {
-                state.p1 = state.p1 || {};
-                state.p1.deck = player1CustomDeck.slice(); // mantém o runtime com objetos de carta
-                pushState(); // envia sanitized para o Firebase
-            } else {
-                state.p2 = state.p2 || {};
-                state.p2.deck = player2CustomDeck.slice(); // mantém o runtime com objetos de carta
-                pushState(); // envia sanitized para o Firebase
-            }
-            pushState();
-            console.log('[DEBUG] synced decks to server', {p1: state.p1 && state.p1.deck && state.p1.deck.length, p2: state.p2 && state.p2.deck && state.p2.deck.length});
+    if (currentDeckBuilderFor === "p1") {
+        state.p1 = state.p1 || {};
+        state.p1.deck = player1CustomDeck.map(c => c.id); // salvar só IDs
+    } else {
+        state.p2 = state.p2 || {};
+        state.p2.deck = player2CustomDeck.map(c => c.id);
+    }
+    pushState();
+    alert("Baralho confirmado! Aguarde o outro jogador...");
 
             // Se este cliente for host, inicia o jogo quando ambos tiverem deck
             const role = getPlayerRole();
