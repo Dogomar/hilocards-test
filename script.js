@@ -620,26 +620,39 @@ function newGame() {
     // Botão de entrar em uma sala existente
     // BOTÃO ENTRAR SALA (guest)
     // BOTÃO ENTRAR SALA (guest)
-joinRoom(roomId, (remoteState) => {
-  state = expandRemoteState(remoteState);
-  updateUI();
+ // Entrar em sala online (guest)
+  document.getElementById("join-room-btn").onclick = () => {
+    const code = document.getElementById("room-code-input").value.trim();
+    if (!code) return alert("Digite um código válido!");
 
-  // Se os dois já têm deck e ainda não começou, forçar o gameStarted
-  if (!state.gameStarted &&
-      state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-      state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-      
-      console.log('[DEBUG] Ambos confirmaram (p2), iniciando jogo');
-      state.gameStarted = true;
-      pushState(); // quem clicou por último dispara
-  }
+    gameMode = "vs-player-online";
+    roomId = code;
+    currentDeckBuilderFor = "p2";
+    state = { p1: { name: "Jogador 1", deck: [] }, p2: { name: "Você", deck: [] } };
 
-  if (state.gameStarted) {
-      document.getElementById("deck-builder-screen").classList.add("hidden");
-      document.querySelector(".game-container").classList.remove("hidden");
-      newGame();
-  }
-});
+    gameModeSelectionScreen.classList.add("hidden");
+    deckBuilderScreen.classList.remove("hidden");
+    initializeDeckBuilder();
+
+    joinRoom(roomId, (remoteState) => {
+      state = expandRemoteState(remoteState);
+      updateUI();
+
+      if (!state.gameStarted &&
+          state.p1.deck && state.p1.deck.length === DECK_SIZE &&
+          state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+        console.log('[DEBUG] Ambos confirmaram (p2), iniciando jogo');
+        state.gameStarted = true;
+        pushState();
+      }
+
+      if (state.gameStarted) {
+        deckBuilderScreen.classList.add("hidden");
+        gameContainer.classList.remove("hidden");
+        newGame();
+      }
+    });
+  };
 
     const gameModeSelectionScreen = document.getElementById('game-mode-selection');
     const deckBuilderScreen = document.getElementById('deck-builder-screen');
@@ -667,43 +680,39 @@ joinRoom(roomId, (remoteState) => {
     };
 
     // BOTÃO CRIAR SALA (host)
-document.getElementById("vs-player-online-btn").onclick = () => {
-gameMode = "vs-player-online";
-currentDeckBuilderFor = "p1";
+// Criar sala online (host)
+  document.getElementById("vs-player-online-btn").onclick = () => {
+    gameMode = "vs-player-online";
+    currentDeckBuilderFor = "p1";
 
+    state = { p1: { name: "Você", deck: [] }, p2: { name: "Aguardando...", deck: [] } };
+    roomId = createRoom(state);
 
-state = { p1: { name: "Você", deck: [] }, p2: { name: "Aguardando...", deck: [] } };
-roomId = createRoom(state);
+    listenRoom(roomId, (remoteState) => {
+      state = expandRemoteState(remoteState);
+      updateUI();
 
+      if (!state.gameStarted &&
+          state.p1.deck && state.p1.deck.length === DECK_SIZE &&
+          state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+        console.log('[DEBUG] Ambos confirmaram, iniciando jogo');
+        state.gameStarted = true;
+        pushState();
+      }
 
-listenRoom(roomId, (remoteState) => {
-  state = expandRemoteState(remoteState);
-  updateUI();
+      if (state.gameStarted) {
+        deckBuilderScreen.classList.add("hidden");
+        gameContainer.classList.remove("hidden");
+        newGame();
+      }
+    });
 
-  // Verifica se os dois confirmaram os decks
-  if (!state.gameStarted &&
-      state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-      state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-      
-      console.log('[DEBUG] Ambos confirmaram, iniciando jogo');
-      state.gameStarted = true;
-      pushState(); // sincroniza para os dois
-  }
-
-  if (state.gameStarted) {
-      document.getElementById("deck-builder-screen").classList.add("hidden");
-      document.querySelector(".game-container").classList.remove("hidden");
-      newGame(); // reconstrói usando os decks do state (não os locais!)
-  }
-});
-
-
-document.getElementById("room-code").innerText = roomId;
-document.getElementById("room-code-display").classList.remove("hidden");
-document.getElementById("game-mode-selection").classList.add("hidden");
-document.getElementById("deck-builder-screen").classList.remove("hidden");
-initializeDeckBuilder();
-};
+    document.getElementById("room-code").innerText = roomId;
+    document.getElementById("room-code-display").classList.remove("hidden");
+    gameModeSelectionScreen.classList.add("hidden");
+    deckBuilderScreen.classList.remove("hidden");
+    initializeDeckBuilder();
+  };
 
 
 
