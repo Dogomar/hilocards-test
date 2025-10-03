@@ -132,20 +132,25 @@ alert("Erro ao salvar baralho.");
     return playerKey === 'p1' ? 'p2' : 'p1';
   }
 
-  function newGame() {
-state = {
-turn: 1,
-active: 'p1',
-p1: { id: 'p1', name: 'Jogador 1', pv: MAX_PV, deck: shuffle(player1CustomDeck), hand: [], discard: [], energy: 0, shield: 0 },
-p2: { id: 'p2', name: gameMode === 'vs-bot' ? 'Inimigo' : 'Jogador 2', pv: MAX_PV, deck: gameMode === 'vs-bot' ? shuffle(buildStarterDeck()) : shuffle(player2CustomDeck), hand: [], discard: [], energy: 0, shield: 0 },
-activeEffects: [],
-log: [],
-gameEnded: false,
-playedCards: [],
-undoStack: []
-};
-for(let i=0; i<5; i++) { drawCard('p1'); drawCard('p2'); }
-startTurn('p1');
+function newGame() {
+  // reconstrói os decks a partir do state salvo no Firebase (ids -> objetos)
+  const deckP1 = (state.p1.deck || []).map(id => CARD_POOL[id]);
+  const deckP2 = (state.p2.deck || []).map(id => CARD_POOL[id]);
+
+  state = {
+    turn: 1,
+    active: 'p1',
+    p1: { id: 'p1', name: state.p1.name || 'Jogador 1', pv: MAX_PV, deck: shuffle(deckP1), hand: [], discard: [], energy: 0, shield: 0 },
+    p2: { id: 'p2', name: state.p2.name || 'Jogador 2', pv: MAX_PV, deck: shuffle(deckP2), hand: [], discard: [], energy: 0, shield: 0 },
+    activeEffects: [],
+    log: [],
+    gameEnded: false,
+    playedCards: [],
+    undoStack: []
+  };
+
+  for (let i = 0; i < 5; i++) { drawCard('p1'); drawCard('p2'); }
+  startTurn('p1');
 }
   
   function buildStarterDeck() {
