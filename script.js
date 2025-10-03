@@ -615,40 +615,27 @@ startTurn('p1');
     // Botão de entrar em uma sala existente
     // BOTÃO ENTRAR SALA (guest)
     // BOTÃO ENTRAR SALA (guest)
-document.getElementById("join-room-btn").onclick = () => {
-const code = document.getElementById("room-code-input").value.trim();
-if (!code) return alert("Digite um código válido!");
-
-
-gameMode = "vs-player-online";
-roomId = code;
-currentDeckBuilderFor = "p2";
-state = { p1: { name: "Jogador 1", deck: [] }, p2: { name: "Você", deck: [] } };
-
-
-document.getElementById("game-mode-selection").classList.add("hidden");
-document.getElementById("deck-builder-screen").classList.remove("hidden");
-initializeDeckBuilder();
-
-
 joinRoom(roomId, (remoteState) => {
-state = expandRemoteState(remoteState);
-updateUI();
+  state = expandRemoteState(remoteState);
+  updateUI();
 
+  // Se os dois já têm deck e ainda não começou, forçar o gameStarted
+  if (!state.gameStarted &&
+      state.p1.deck && state.p1.deck.length === DECK_SIZE &&
+      state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+      
+      console.log('[DEBUG] Ambos confirmaram (p2), iniciando jogo');
+      state.gameStarted = true;
+      pushState(); // quem clicou por último dispara
+  }
 
-if (!state.p2 || state.p2.name === "Aguardando...") {
-state.p2 = { name: "Você", deck: [] };
-pushState();
-}
-
-
-if (state.gameStarted) {
-document.getElementById("deck-builder-screen").classList.add("hidden");
-document.querySelector(".game-container").classList.remove("hidden");
-newGame();
-}
+  if (state.gameStarted) {
+      document.getElementById("deck-builder-screen").classList.add("hidden");
+      document.querySelector(".game-container").classList.remove("hidden");
+      newGame();
+  }
 });
-};
+
     const gameModeSelectionScreen = document.getElementById('game-mode-selection');
     const deckBuilderScreen = document.getElementById('deck-builder-screen');
     const gameContainer = document.querySelector('.game-container');
@@ -685,29 +672,24 @@ roomId = createRoom(state);
 
 
 listenRoom(roomId, (remoteState) => {
-state = expandRemoteState(remoteState);
-updateUI();
+  state = expandRemoteState(remoteState);
+  updateUI();
 
+  // Verifica se os dois confirmaram os decks
+  if (!state.gameStarted &&
+      state.p1.deck && state.p1.deck.length === DECK_SIZE &&
+      state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+      
+      console.log('[DEBUG] Ambos confirmaram, iniciando jogo');
+      state.gameStarted = true;
+      pushState(); // sincroniza para os dois
+  }
 
-const role = getPlayerRole();
-if (role === 'p1' && !state.gameStarted &&
-state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-console.log('[DEBUG] Host iniciando jogo');
-state.gameStarted = true;
-pushState();
-document.getElementById("deck-builder-screen").classList.add("hidden");
-document.querySelector(".game-container").classList.remove("hidden");
-newGame();
-return;
-}
-
-
-if (state.gameStarted) {
-document.getElementById("deck-builder-screen").classList.add("hidden");
-document.querySelector(".game-container").classList.remove("hidden");
-newGame();
-}
+  if (state.gameStarted) {
+      document.getElementById("deck-builder-screen").classList.add("hidden");
+      document.querySelector(".game-container").classList.remove("hidden");
+      newGame(); // reconstrói usando os decks do state (não os locais!)
+  }
 });
 
 
