@@ -655,42 +655,53 @@ startTurn('p1');
     document.getElementById('undo-move').onclick = undoMove;
   
     // Controles do Deck Builder
-    const startBtn = document.getElementById('start-game-btn');
-    startBtn.onclick = () => {
+    // --- handler protegido e com debug para o botão Confirmar Baralho ---
+const startBtn = document.getElementById('start-game-btn');
+if (!startBtn) console.error('[DEBUG] start-game-btn element NOT found!'); else console.log('[DEBUG] start-game-btn element found');
+startBtn.onclick = () => {
+    try {
+        console.log('[DEBUG] startBtn clicked. currentDeckBuilderFor=', currentDeckBuilderFor, 'DECK_SIZE=', DECK_SIZE);
         const currentDeck = (currentDeckBuilderFor === 'p1') ? player1CustomDeck : player2CustomDeck;
-        if (currentDeck.length !== DECK_SIZE) return;
+        console.log('[DEBUG] currentDeck length=', currentDeck.length);
+        if (currentDeck.length !== DECK_SIZE) {
+            alert(`Seu baralho tem ${currentDeck.length}/${DECK_SIZE} cartas. Complete-o antes de confirmar.`);
+            return;
+        }
 
         if (gameMode === "vs-player-online") {
-    if (currentDeckBuilderFor === "p1") {
-        state.p1.deck = player1CustomDeck;
-    } else {
-        state.p2.deck = player2CustomDeck;
-    }
-    syncState(state);
+            if (currentDeckBuilderFor === "p1") {
+                state.p1 = state.p1 || {};
+                state.p1.deck = player1CustomDeck.slice();
+            } else {
+                state.p2 = state.p2 || {};
+                state.p2.deck = player2CustomDeck.slice();
+            }
+            syncState(state);
+            console.log('[DEBUG] synced decks to server', {p1: state.p1 && state.p1.deck && state.p1.deck.length, p2: state.p2 && state.p2.deck && state.p2.deck.length});
 
-    // Se for host, checa se já pode iniciar
-    if (getPlayerRole() === "p1" &&
-        state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-        state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-
-        state.gameStarted = true;
-        syncState(state);
-
-        document.getElementById("deck-builder-screen").classList.add("hidden");
-        document.querySelector(".game-container").classList.remove("hidden");
-        newGame();
-    } else {
-        alert("Baralho confirmado! Aguarde o outro jogador...");
-    }
-}
-
-
-        else {
-            // Modos locais
+            // Se este cliente for host, inicia o jogo quando ambos tiverem deck
+            const role = getPlayerRole();
+            console.log('[DEBUG] my role=', role);
+            if (role === 'p1' && state.p1.deck && state.p1.deck.length === DECK_SIZE && state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+                state.gameStarted = true;
+                syncState(state);
+                document.getElementById("deck-builder-screen").classList.add("hidden");
+                document.querySelector(".game-container").classList.remove("hidden");
+                newGame();
+            } else {
+                alert("Baralho confirmado! Aguarde o outro jogador...");
+            }
+        } else {
+            // modos locais
             deckBuilderScreen.classList.add('hidden');
             gameContainer.classList.remove('hidden');
             newGame();
         }
-    };
+    } catch (err) {
+        console.error('[ERROR] startBtn handler', err);
+        alert('Erro ao confirmar baralho. Veja o console para detalhes.');
+    }
+};
+
 
   });
