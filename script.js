@@ -56,84 +56,68 @@ const CARD_POOL = {
   
   // ----------------- helpers para sync com Firebase -----------------
 function serializeCardArray(arr) {
-  if (!Array.isArray(arr)) return [];
-  return arr.map(c => {
-    if (!c) return null;
-    if (typeof c === 'string') return c;
-    if (c.id) return c.id;
-    return null;
-  }).filter(x => x != null);
+if (!Array.isArray(arr)) return [];
+return arr.map(c => (typeof c === 'string') ? c : (c && c.id ? c.id : null)).filter(x => x != null);
 }
 
+
 function sanitizeStateForSync(st) {
-  if (!st) return st;
-  const s = {
-    turn: st.turn || 1,
-    active: st.active || 'p1',
-    gameStarted: !!st.gameStarted,
-    activeEffects: st.activeEffects || [],
-    log: st.log || [],
-    gameEnded: !!st.gameEnded
-  };
+if (!st) return st;
+const s = {
+turn: st.turn || 1,
+active: st.active || 'p1',
+gameStarted: !!st.gameStarted,
+activeEffects: st.activeEffects || [],
+log: st.log || [],
+gameEnded: !!st.gameEnded
+};
 
-  ['p1','p2'].forEach(pk => {
-    const p = st[pk] || {};
-    s[pk] = {
-      id: p.id || pk,
-      name: p.name || pk,
-      pv: (typeof p.pv === 'number') ? p.pv : 40,   // <-- valor padrão
-      deck: serializeCardArray(p.deck),
-      hand: serializeCardArray(p.hand),
-      discard: serializeCardArray(p.discard),
-      energy: (typeof p.energy === 'number') ? p.energy : 0,
-      shield: (typeof p.shield === 'number') ? p.shield : 0
-    };
-  });
 
-  s.playedCards = serializeCardArray(st.playedCards);
-  return s;
+['p1','p2'].forEach(pk => {
+const p = st[pk] || {};
+s[pk] = {
+id: p.id || pk,
+name: p.name || pk,
+pv: (typeof p.pv === 'number') ? p.pv : 40,
+deck: serializeCardArray(p.deck || []),
+hand: serializeCardArray(p.hand || []),
+discard: serializeCardArray(p.discard || []),
+energy: (typeof p.energy === 'number') ? p.energy : 0,
+shield: (typeof p.shield === 'number') ? p.shield : 0
+};
+});
+
+
+s.playedCards = serializeCardArray(st.playedCards || []);
+return s;
 }
 
 
 function expandRemoteState(remote) {
-  if (!remote) return null;
-  // shallow copy of remote fields
-  const s = JSON.parse(JSON.stringify(remote));
-
-  ['p1','p2'].forEach(pk => {
-    const p = s[pk] || {};
-    ['deck','hand','discard'].forEach(k => {
-      if (!Array.isArray(p[k])) p[k] = [];
-      else p[k] = p[k].map(id => {
-        if (typeof id === 'string' && CARD_POOL[id]) return {...CARD_POOL[id]}; // clone object local
-        return id; // fallback
-      });
-    });
-    p.id = p.id || pk;
-    s[pk] = p;
-  });
-
-  if (!Array.isArray(s.playedCards)) s.playedCards = [];
-  else s.playedCards = s.playedCards.map(id => CARD_POOL[id] ? {...CARD_POOL[id]} : id);
-
-  s.activeEffects = s.activeEffects || [];
-  s.log = s.log || [];
-  s.turn = s.turn || 1;
-  s.active = s.active || 'p1';
-  s.gameEnded = !!s.gameEnded;
-  s.gameStarted = !!s.gameStarted;
-  return s;
+if (!remote) return null;
+const s = JSON.parse(JSON.stringify(remote));
+['p1','p2'].forEach(pk => {
+const p = s[pk] || {};
+['deck','hand','discard'].forEach(k => {
+if (!Array.isArray(p[k])) p[k] = [];
+else p[k] = p[k].map(id => (typeof id === 'string' && CARD_POOL[id]) ? { ...CARD_POOL[id] } : id);
+});
+s[pk] = p;
+});
+s.playedCards = (Array.isArray(s.playedCards)) ? s.playedCards.map(id => (CARD_POOL[id] ? { ...CARD_POOL[id] } : id)) : [];
+return s;
 }
 
-// wrapper para enviar o state sanitizado ao Firebase
+
 function pushState() {
-  try {
-    const sanitized = sanitizeStateForSync(state);
-    syncState(sanitized);
-    console.log('[DEBUG] pushed sanitized state to firebase', sanitized);
-  } catch (err) {
-    console.error('[ERROR] pushState failed', err);
-  }
+try {
+const sanitized = sanitizeStateForSync(state);
+syncState(sanitized);
+console.log('[DEBUG] pushState enviado', sanitized);
+} catch (err) {
+console.error('[ERROR] pushState failed', err);
+alert("Erro ao salvar baralho.");
+}
 }
 
 
@@ -630,58 +614,41 @@ startTurn('p1');
 
     // Botão de entrar em uma sala existente
     // BOTÃO ENTRAR SALA (guest)
-    document.getElementById("join-room-btn").onclick = () => {
-        const code = document.getElementById("room-code-input").value.trim();
-        if (!code) return alert("Digite um código válido!");
+    // BOTÃO ENTRAR SALA (guest)
+document.getElementById("join-room-btn").onclick = () => {
+const code = document.getElementById("room-code-input").value.trim();
+if (!code) return alert("Digite um código válido!");
 
 
-        gameMode = "vs-player-online";
-        roomId = code;
-        currentDeckBuilderFor = "p2";
-        state = { p1: { name: "Jogador 1" }, p2: { name: "Você" } };
+gameMode = "vs-player-online";
+roomId = code;
+currentDeckBuilderFor = "p2";
+state = { p1: { name: "Jogador 1", deck: [] }, p2: { name: "Você", deck: [] } };
 
 
-        document.getElementById("game-mode-selection").classList.add("hidden");
-        document.getElementById("deck-builder-screen").classList.remove("hidden");
-        initializeDeckBuilder();
+document.getElementById("game-mode-selection").classList.add("hidden");
+document.getElementById("deck-builder-screen").classList.remove("hidden");
+initializeDeckBuilder();
 
 
-        joinRoom(roomId, (remoteState) => {
-        const expanded = expandRemoteState(remoteState);
-        if (expanded) {
-            state = expanded;
-            updateUI();
-        } else {
-            console.warn('[DEBUG] remoteState vazio em joinRoom');
-        }
+joinRoom(roomId, (remoteState) => {
+state = expandRemoteState(remoteState);
+updateUI();
 
 
-            if (!state.p2 || state.p2.name === 'Aguardando...') {
-            state.p2 = state.p2 || {};
-            state.p2.name = 'Você';
-            // envie apenas a presença (use pushState)
-            pushState();
-        }
+if (!state.p2 || state.p2.name === "Aguardando...") {
+state.p2 = { name: "Você", deck: [] };
+pushState();
+}
 
 
-        if (!state.gameStarted &&
-        state.p1.deck && state.p1.deck.length === DECK_SIZE &&
-        state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-        state.gameStarted = true;
-        pushState();
-        document.getElementById("deck-builder-screen").classList.add("hidden");
-        document.querySelector(".game-container").classList.remove("hidden");
-        newGame();
-        }
-
-
-        if (state.gameStarted) {
-        document.getElementById("deck-builder-screen").classList.add("hidden");
-        document.querySelector(".game-container").classList.remove("hidden");
-        newGame();
-        }
-        });
-    };
+if (state.gameStarted) {
+document.getElementById("deck-builder-screen").classList.add("hidden");
+document.querySelector(".game-container").classList.remove("hidden");
+newGame();
+}
+});
+};
     const gameModeSelectionScreen = document.getElementById('game-mode-selection');
     const deckBuilderScreen = document.getElementById('deck-builder-screen');
     const gameContainer = document.querySelector('.game-container');
@@ -707,51 +674,49 @@ startTurn('p1');
         initializeDeckBuilder();
     };
 
-    document.getElementById("vs-player-online-btn").onclick = () => {
-        gameMode = "vs-player-online";
-        currentDeckBuilderFor = "p1";
+    // BOTÃO CRIAR SALA (host)
+document.getElementById("vs-player-online-btn").onclick = () => {
+gameMode = "vs-player-online";
+currentDeckBuilderFor = "p1";
 
 
-        state = { p1: { name: "Você" }, p2: { name: "Aguardando..." } };
-        roomId = createRoom(state);
+state = { p1: { name: "Você", deck: [] }, p2: { name: "Aguardando...", deck: [] } };
+roomId = createRoom(state);
 
 
-        // Host escuta a sala
-        listenRoom(roomId, (remoteState) => {
-            state = expandRemoteState(remoteState); // reconstrói cartas a partir de IDs
-            updateUI();
-
-            const role = getPlayerRole();
-            // se for host e os dois decks tiverem 20 cartas
-            if (!state.gameStarted && role === 'p1' &&
-                state.p1 && Array.isArray(state.p1.deck) && state.p1.deck.length === DECK_SIZE &&
-                state.p2 && Array.isArray(state.p2.deck) && state.p2.deck.length === DECK_SIZE) {
-                
-                console.log('[DEBUG] Host detectou os dois decks prontos, iniciando...');
-                state.gameStarted = true;
-                pushState();
-
-                document.getElementById("deck-builder-screen").classList.add("hidden");
-                document.querySelector(".game-container").classList.remove("hidden");
-                newGame();
-                return;
-            }
-
-            if (state.gameStarted) {
-                document.getElementById("deck-builder-screen").classList.add("hidden");
-                document.querySelector(".game-container").classList.remove("hidden");
-                newGame();
-            }
-            });
+listenRoom(roomId, (remoteState) => {
+state = expandRemoteState(remoteState);
+updateUI();
 
 
+const role = getPlayerRole();
+if (role === 'p1' && !state.gameStarted &&
+state.p1.deck && state.p1.deck.length === DECK_SIZE &&
+state.p2.deck && state.p2.deck.length === DECK_SIZE) {
+console.log('[DEBUG] Host iniciando jogo');
+state.gameStarted = true;
+pushState();
+document.getElementById("deck-builder-screen").classList.add("hidden");
+document.querySelector(".game-container").classList.remove("hidden");
+newGame();
+return;
+}
 
-        document.getElementById("room-code").innerText = roomId;
-        document.getElementById("room-code-display").classList.remove("hidden");
-        document.getElementById("game-mode-selection").classList.add("hidden");
-        document.getElementById("deck-builder-screen").classList.remove("hidden");
-        initializeDeckBuilder();
-    };
+
+if (state.gameStarted) {
+document.getElementById("deck-builder-screen").classList.add("hidden");
+document.querySelector(".game-container").classList.remove("hidden");
+newGame();
+}
+});
+
+
+document.getElementById("room-code").innerText = roomId;
+document.getElementById("room-code-display").classList.remove("hidden");
+document.getElementById("game-mode-selection").classList.add("hidden");
+document.getElementById("deck-builder-screen").classList.remove("hidden");
+initializeDeckBuilder();
+};
 
 
 
@@ -762,50 +727,29 @@ startTurn('p1');
     // Controles do Deck Builder
     // --- handler protegido e com debug para o botão Confirmar Baralho ---
 const startBtn = document.getElementById('start-game-btn');
-if (!startBtn) console.error('[DEBUG] start-game-btn element NOT found!'); else console.log('[DEBUG] start-game-btn element found');
 startBtn.onclick = () => {
-    try {
-        console.log('[DEBUG] startBtn clicked. currentDeckBuilderFor=', currentDeckBuilderFor, 'DECK_SIZE=', DECK_SIZE);
-        const currentDeck = (currentDeckBuilderFor === 'p1') ? player1CustomDeck : player2CustomDeck;
-        console.log('[DEBUG] currentDeck length=', currentDeck.length);
-        if (currentDeck.length !== DECK_SIZE) {
-            alert(`Seu baralho tem ${currentDeck.length}/${DECK_SIZE} cartas. Complete-o antes de confirmar.`);
-            return;
-        }
+const currentDeck = (currentDeckBuilderFor === 'p1') ? player1CustomDeck : player2CustomDeck;
+if (currentDeck.length !== DECK_SIZE) {
+alert(`Seu baralho tem ${currentDeck.length}/${DECK_SIZE} cartas.`);
+return;
+}
 
-        if (gameMode === "vs-player-online") {
-    if (currentDeckBuilderFor === "p1") {
-        state.p1 = state.p1 || {};
-        state.p1.deck = player1CustomDeck.map(c => c.id); // salvar só IDs
-    } else {
-        state.p2 = state.p2 || {};
-        state.p2.deck = player2CustomDeck.map(c => c.id);
-    }
-    pushState();
-    alert("Baralho confirmado! Aguarde o outro jogador...");
 
-            // Se este cliente for host, inicia o jogo quando ambos tiverem deck
-            const role = getPlayerRole();
-            console.log('[DEBUG] my role=', role);
-            if (role === 'p1' && state.p1.deck && state.p1.deck.length === DECK_SIZE && state.p2.deck && state.p2.deck.length === DECK_SIZE) {
-                state.gameStarted = true;
-                syncState(state);
-                document.getElementById("deck-builder-screen").classList.add("hidden");
-                document.querySelector(".game-container").classList.remove("hidden");
-                newGame();
-            } else {
-                alert("Baralho confirmado! Aguarde o outro jogador...");
-            }
-        } else {
-            // modos locais
-            deckBuilderScreen.classList.add('hidden');
-            gameContainer.classList.remove('hidden');
-            newGame();
-        }
-    } catch (err) {
-        console.error('[ERROR] startBtn handler', err);
-        alert('Erro ao confirmar baralho. Veja o console para detalhes.');
-    }
+if (gameMode === "vs-player-online") {
+if (currentDeckBuilderFor === 'p1') {
+state.p1 = state.p1 || {};
+state.p1.deck = currentDeck.map(c => c.id);
+} else {
+state.p2 = state.p2 || {};
+state.p2.deck = currentDeck.map(c => c.id);
+}
+pushState();
+alert("Baralho confirmado! Aguarde o outro jogador...");
+} else {
+deckBuilderScreen.classList.add('hidden');
+gameContainer.classList.remove('hidden');
+newGame();
+}
 };
 
 
