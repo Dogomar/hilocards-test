@@ -622,6 +622,7 @@ function newGame() {
     // BOTÃO ENTRAR SALA (guest)
  // Entrar em sala online (guest)
   document.getElementById("join-room-btn").onclick = () => {
+    const gameModeSelectionScreen = document.getElementById('game-container hidden');
     const code = document.getElementById("room-code-input").value.trim();
     if (!code) return alert("Digite um código válido!");
 
@@ -653,8 +654,6 @@ function newGame() {
       }
     });
   };
-
-    const gameModeSelectionScreen = document.getElementById('game-mode-selection');
     const deckBuilderScreen = document.getElementById('deck-builder-screen');
     const gameContainer = document.querySelector('.game-container');
 
