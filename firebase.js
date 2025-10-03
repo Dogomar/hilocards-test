@@ -32,7 +32,6 @@ return roomId;
 }
 
 
-// Host escuta a sala
 export function listenRoom(code, callback) {
 roomId = code;
 onValue(ref(db, `rooms/${roomId}`), (snapshot) => {
@@ -41,7 +40,6 @@ if (snapshot.exists()) callback(snapshot.val());
 }
 
 
-// Guest entra e escuta
 export function joinRoom(code, callback) {
 roomId = code;
 playerRole = "p2";
