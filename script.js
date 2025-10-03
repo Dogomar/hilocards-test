@@ -68,8 +68,8 @@ function serializeCardArray(arr) {
 function sanitizeStateForSync(st) {
   if (!st) return st;
   const s = {
-    turn: st.turn,
-    active: st.active,
+    turn: st.turn || 1,
+    active: st.active || 'p1',
     gameStarted: !!st.gameStarted,
     activeEffects: st.activeEffects || [],
     log: st.log || [],
@@ -79,21 +79,21 @@ function sanitizeStateForSync(st) {
   ['p1','p2'].forEach(pk => {
     const p = st[pk] || {};
     s[pk] = {
-      id: p.id,
-      name: p.name,
-      pv: p.pv,
+      id: p.id || pk,
+      name: p.name || pk,
+      pv: (typeof p.pv === 'number') ? p.pv : 40,   // <-- valor padrão
       deck: serializeCardArray(p.deck),
       hand: serializeCardArray(p.hand),
       discard: serializeCardArray(p.discard),
-      energy: p.energy,
-      shield: p.shield
+      energy: (typeof p.energy === 'number') ? p.energy : 0,
+      shield: (typeof p.shield === 'number') ? p.shield : 0
     };
   });
 
   s.playedCards = serializeCardArray(st.playedCards);
-  // Não enviamos undoStack (local)
   return s;
 }
+
 
 function expandRemoteState(remote) {
   if (!remote) return null;
