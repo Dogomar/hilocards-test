@@ -133,9 +133,8 @@ alert("Erro ao salvar baralho.");
   }
 
 function newGame() {
-  // reconstrói os decks a partir do state salvo no Firebase (ids -> objetos)
-  const deckP1 = (state.p1.deck || []).map(id => CARD_POOL[id]);
-  const deckP2 = (state.p2.deck || []).map(id => CARD_POOL[id]);
+  const deckP1 = (state.p1.deck || []).map(c => typeof c === "string" ? CARD_POOL[c] : c);
+  const deckP2 = (state.p2.deck || []).map(c => typeof c === "string" ? CARD_POOL[c] : c);
 
   state = {
     turn: 1,
@@ -622,7 +621,6 @@ function newGame() {
     // BOTÃO ENTRAR SALA (guest)
  // Entrar em sala online (guest)
   document.getElementById("join-room-btn").onclick = () => {
-    const gameModeSelectionScreen = document.getElementById('game-container hidden');
     const code = document.getElementById("room-code-input").value.trim();
     if (!code) return alert("Digite um código válido!");
 
